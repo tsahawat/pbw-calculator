@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PBW & Tidal Volume Calculator</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --muted: #94a3b8;
+      --text: #e5e7eb;
+      --green: #16a34a;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --accent: #22d3ee;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1000px 600px at 10% -10%, #0b1220 10%, var(--bg)), #000;
+      color: var(--text);
+      line-height: 1.45;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 760px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(8px);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.6rem;
+      letter-spacing: 0.2px;
+    }
+
+    p.sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    @media (min-width: 640px) {
+      .row {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .field {
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 12px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0b1220;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .unit {
+      color: var(--muted);
+      font-size: 0.95rem;
+      white-space: nowrap;
+      padding: 0 6px;
+    }
+
+    .radios {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      cursor: pointer;
+      user-select: none;
+      background: #0b1220;
+    }
+
+    .chip input {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--muted);
+      display: inline-block;
+      position: relative;
+    }
+
+    .chip input:checked {
+      border-color: var(--accent);
+    }
+
+    .chip input:checked::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .btn {
+      margin-top: 10px;
+      width: 100%;
+      padding: 14px 16px;
+      background: linear-gradient(180deg, #22d3ee, #06b6d4);
+      color: #06202a;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+    }
+
+    .grid {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    @media (min-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-top: 1px dashed rgba(255, 255, 255, 0.08);
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+
+    .metric:first-child {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .value {
+      font: 700 1.25rem/1 system-ui, -apple-system;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    .tag.green {
+      background: rgba(22, 163, 74, 0.15);
+      color: #86efac;
+      border: 1px solid rgba(22, 163, 74, 0.35);
+    }
+
+    .tag.yellow {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fde68a;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .tag.red {
+      background: rgba(239, 68, 68, 0.14);
+      color: #fecaca;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .small {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono";
+    }
+
+    .warn {
+      color: #fca5a5;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <h1>PBW & Tidal Volume Calculator</h1>
+    <p class="sub">Enter height (cm) and sex.</p>
+
+    <div class="row">
+      <div class="field">
+        <label for="heightCm">Height</label>
+        <div class="input-wrap">
+          <input id="heightCm" type="number" inputmode="decimal" min="0" max="250" step="0.1" placeholder="e.g., 170">
+          <div class="unit">cm</div>
+        </div>
+        <div class="small">Works down to <span class="warn">25 cm</span>.</div>
+      </div>
+
+      <div class="field">
+        <label>Sex</label>
+        <div class="radios" role="radiogroup" aria-label="Sex">
+          <label class="chip"><input type="radio" name="sex" value="male" checked> Male &#9794</label>
+          <label class="chip"><input type="radio" name="sex" value="female"> Female &#9792</label>
+        </div>
+        <button class="btn" id="calcBtn" aria-label="Calculate PBW and tidal volumes">Calculate</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="metric">
+          <div class="label">Predicted Body Weight (PBW)</div>
+          <div class="value"><span id="pbw">–</span> <span class="small">kg</span></div>
+        </div>
+        <div class="small">Reference: Martin, D.C., Richards, G.N. Predicted body weight relationships for protective
+          ventilation – unisex proposals from pre-term through to adult. <em>BMC Pulm Med</em> 17, 85 (2017).
+          <a href="https://doi.org/10.1186/s12890-017-0427-1">Link to article.</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="metric">
+          <div class="label">6 mL/kg <span class="tag green">Optimal</span></div>
+          <div class="value">
+            <span id="vt6" style="color: #86efac;">–</span><span class="small"> mL</span>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="label">8 mL/kg <span class="tag yellow">Acceptable</span></div>
+          <div class="value"><span id="vt8" style="color: #fde68a;">–</span> <span class="small"> mL</span></div>
+        </div>
+        <div class="metric">
+          <div class="label">10 mL/kg <span class="tag red">High</span></div>
+          <div class="value"><span id="vt10" style="color: #fecaca;">–</span> <span class="small"> mL</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Rounding: PBW to 1 decimal; V<sub>T</sub> to nearest 5 mL.</div>
+      <div>Created by Sahawat Thertchanakun</div>
+    </div>
+  </div>
+
+  <script>
+    function round1(x) { return Math.round(x * 10) / 10; }
+    function round5(x) { return Math.round(x / 5) * 5; }
+
+    // Implements your Google Sheets IFS exactly.
+    // A2 = height (cm); B2 = sex (male/female)
+    function pbwFrom(heightCm, sexRaw) {
+      const h = heightCm;
+      const sex = (sexRaw || "").toLowerCase();
+
+      if (sex === "male") {
+        if (h >= 152.4) return (h - 152.4) * 0.91 + 50;
+        if (h >= 124) return (h - 124) * 0.91 + 24.2;
+        if (h >= 105) return (h - 105) * 0.41 + 16.4;
+      } else if (sex === "female") {
+        if (h >= 152.4) return (h - 152.4) * 0.91 + 45.5;
+        if (h >= 133) return (h - 133) * 0.91 + 27.9;
+        if (h >= 105) return (h - 105) * 0.41 + 16.4;
+      }
+      if (h >= 45) return (h - 45) * 0.239 + 2.05;
+      if (h >= 33) return (h - 33) * 0.116 + 0.66;
+      if (h >= 25) return (h - 25) * 0.055 + 0.22;
+      // A2 < 25 -> "Error"
+      return NaN;
+    }
+
+    function calc() {
+      const hInput = document.getElementById('heightCm');
+      const height = parseFloat(hInput.value);
+      const sex = (document.querySelector('input[name="sex"]:checked') || {}).value;
+
+      if (isNaN(height)) { alert('Please enter height in cm.'); return; }
+      const pbw = pbwFrom(height, sex);
+
+      if (!isFinite(pbw)) {
+        document.getElementById('pbw').textContent = 'Error';
+        document.getElementById('vt6').textContent = '–';
+        document.getElementById('vt8').textContent = '–';
+        document.getElementById('vt10').textContent = '–';
+        return;
+      }
+
+      const pbwRounded = round1(pbw);
+      const vt6 = round5(6 * pbwRounded);
+      const vt8 = round5(8 * pbwRounded);
+      const vt10 = round5(10 * pbwRounded);
+
+      document.getElementById('pbw').textContent = pbwRounded.toFixed(1);
+      document.getElementById('vt6').textContent = Math.max(0, Math.round(vt6)).toString();
+      document.getElementById('vt8').textContent = Math.max(0, Math.round(vt8)).toString();
+      document.getElementById('vt10').textContent = Math.max(0, Math.round(vt10)).toString();
+    }
+
+    document.getElementById('calcBtn').addEventListener('click', calc);
+    document.getElementById('heightCm').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); calc(); }
+    });
+  </script>
+</body>
+
+</html>
