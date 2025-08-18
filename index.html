@@ -273,75 +273,72 @@
 </head>
 
 <body>
-<script> // CountAPI
+<!-- CountAPI: pbw-calculator -->
+<script>
   (function () {
-    const NS = 'pbw-calculator';     // <-- your namespace
-    const VISITS_KEY = 'visits';
-    const CALC_KEY = 'calc';
+    const NS = 'pbw-calculator';
+    const VKEY = 'visits';
+    const CKEY = 'calc';
 
-    async function countapi(endpoint) {
+    // Add visible counters
+    const bar = document.createElement('div');
+    bar.style.cssText = 'margin-top:12px;font-size:12px;color:#94a3b8;text-align:center';
+    bar.innerHTML = '<span id="visTxt">Visits: …</span> &nbsp; • &nbsp; <span id="calcTxt">Calculations: …</span>';
+    document.body.appendChild(bar);
+    const visTxt = () => document.getElementById('visTxt');
+    const calcTxt = () => document.getElementById('calcTxt');
+
+    async function getJSON(url) {
       try {
-        const r = await fetch('https://api.countapi.xyz/' + endpoint, {cache: 'no-cache'});
+        const r = await fetch(url, {cache:'no-cache'});
+        if (!r.ok) throw new Error('HTTP ' + r.status);
         return await r.json();
-      } catch { return null; }
-    }
-
-    // --- 1) Page views (increment at most once/day/device) ---
-    const today = new Date().toISOString().slice(0,10);
-    const lastHit = localStorage.getItem('pbw_visit_date');
-
-    // (Optional) small footer text; remove these 3 lines to hide it
-    const visitsEl = document.createElement('div');
-    visitsEl.style.cssText = 'margin-top:8px;font-size:12px;color:#94a3b8;text-align:center;';
-    visitsEl.id = 'visitCounter'; visitsEl.textContent = 'Loading visits…';
-    document.body.appendChild(visitsEl);
-
-    async function updateVisits() {
-      let data;
-      if (lastHit === today) {
-        data = await countapi(`get/${NS}/${VISITS_KEY}`);
-      } else {
-        data = await countapi(`hit/${NS}/${VISITS_KEY}`);
-        if (data) localStorage.setItem('pbw_visit_date', today);
-      }
-      if (data && typeof data.value === 'number') {
-        const text = 'Total visits: ' + data.value;
-        const el = document.getElementById('visitCounter'); if (el) el.textContent = text;
-      } else {
-        const el = document.getElementById('visitCounter'); if (el) el.textContent = '';
+      } catch (e) {
+        const vt = visTxt(), ct = calcTxt();
+        if (vt) vt.textContent = 'Visits: blocked/unavailable';
+        if (ct) ct.textContent = 'Calculations: blocked/unavailable';
+        console.warn('CountAPI error', e);
+        return null;
       }
     }
 
-    // --- 2) “Calculator used” (first valid calc per page load) ---
-    let calcCounted = false;
-    async function markCalcUse() {
-      if (calcCounted) return;
-      await countapi(`hit/${NS}/${CALC_KEY}`);
-      calcCounted = true;
+    async function bumpVisits() {
+      const data = await getJSON(`https://api.countapi.xyz/hit/${NS}/${VKEY}`);
+      if (data && visTxt()) visTxt().textContent = 'Visits: ' + data.value;
     }
 
-    // Hook into your existing calc() if present; otherwise watch height input
-    function tryHook() {
+    // expose a helper to bump calc count after first valid calc
+    let countedCalc = false;
+    async function bumpCalcOnce() {
+      if (countedCalc) return;
+      const data = await getJSON(`https://api.countapi.xyz/hit/${NS}/${CKEY}`);
+      if (data && calcTxt()) calcTxt().textContent = 'Calculations: ' + data.value;
+      countedCalc = true;
+    }
+
+    // Try to hook your calc() if it exists
+    const hook = () => {
       if (typeof window.calc === 'function') {
         const orig = window.calc;
         window.calc = function () {
           const res = orig.apply(this, arguments);
           const hEl = document.getElementById('heightCm');
-          if (hEl && hEl.value && !isNaN(parseFloat(hEl.value))) markCalcUse();
+          if (hEl && hEl.value && !isNaN(parseFloat(hEl.value))) bumpCalcOnce();
           return res;
         };
       } else {
+        // Fallback: when height becomes a number, count once
         const hEl = document.getElementById('heightCm');
         if (hEl) {
           hEl.addEventListener('input', () => {
-            if (!calcCounted && !isNaN(parseFloat(hEl.value))) markCalcUse();
+            if (!isNaN(parseFloat(hEl.value))) bumpCalcOnce();
           });
         }
       }
-    }
+    };
 
-    updateVisits();
-    window.addEventListener('DOMContentLoaded', () => setTimeout(tryHook, 0));
+    bumpVisits();
+    window.addEventListener('DOMContentLoaded', hook);
   })();
 </script> <!-- end CountAPI -->
 
@@ -466,6 +463,7 @@
 </body>
 
 </html>
+
 
 
 
