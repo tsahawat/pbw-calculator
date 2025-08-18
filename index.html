@@ -273,6 +273,78 @@
 </head>
 
 <body>
+<script> // CountAPI
+  (function () {
+    const NS = 'pbw-calculator';     // <-- your namespace
+    const VISITS_KEY = 'visits';
+    const CALC_KEY = 'calc';
+
+    async function countapi(endpoint) {
+      try {
+        const r = await fetch('https://api.countapi.xyz/' + endpoint, {cache: 'no-cache'});
+        return await r.json();
+      } catch { return null; }
+    }
+
+    // --- 1) Page views (increment at most once/day/device) ---
+    const today = new Date().toISOString().slice(0,10);
+    const lastHit = localStorage.getItem('pbw_visit_date');
+
+    // (Optional) small footer text; remove these 3 lines to hide it
+    const visitsEl = document.createElement('div');
+    visitsEl.style.cssText = 'margin-top:8px;font-size:12px;color:#94a3b8;text-align:center;';
+    visitsEl.id = 'visitCounter'; visitsEl.textContent = 'Loading visits…';
+    document.body.appendChild(visitsEl);
+
+    async function updateVisits() {
+      let data;
+      if (lastHit === today) {
+        data = await countapi(`get/${NS}/${VISITS_KEY}`);
+      } else {
+        data = await countapi(`hit/${NS}/${VISITS_KEY}`);
+        if (data) localStorage.setItem('pbw_visit_date', today);
+      }
+      if (data && typeof data.value === 'number') {
+        const text = 'Total visits: ' + data.value;
+        const el = document.getElementById('visitCounter'); if (el) el.textContent = text;
+      } else {
+        const el = document.getElementById('visitCounter'); if (el) el.textContent = '';
+      }
+    }
+
+    // --- 2) “Calculator used” (first valid calc per page load) ---
+    let calcCounted = false;
+    async function markCalcUse() {
+      if (calcCounted) return;
+      await countapi(`hit/${NS}/${CALC_KEY}`);
+      calcCounted = true;
+    }
+
+    // Hook into your existing calc() if present; otherwise watch height input
+    function tryHook() {
+      if (typeof window.calc === 'function') {
+        const orig = window.calc;
+        window.calc = function () {
+          const res = orig.apply(this, arguments);
+          const hEl = document.getElementById('heightCm');
+          if (hEl && hEl.value && !isNaN(parseFloat(hEl.value))) markCalcUse();
+          return res;
+        };
+      } else {
+        const hEl = document.getElementById('heightCm');
+        if (hEl) {
+          hEl.addEventListener('input', () => {
+            if (!calcCounted && !isNaN(parseFloat(hEl.value))) markCalcUse();
+          });
+        }
+      }
+    }
+
+    updateVisits();
+    window.addEventListener('DOMContentLoaded', () => setTimeout(tryHook, 0));
+  })();
+</script> <!-- end CountAPI -->
+
   <div class="app">
     <h1>PBW & Tidal Volume Calculator</h1>
     <p class="sub">Enter height (cm) and sex.</p>
@@ -394,6 +466,7 @@
 </body>
 
 </html>
+
 
 
 
