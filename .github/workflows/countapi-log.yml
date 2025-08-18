@@ -1,0 +1,48 @@
+name: CountAPI Daily Log
+on:
+  schedule:
+    - cron: "5 0 * * *"   # 00:05 UTC daily (~07:05 Bangkok, UTC+7)
+  workflow_dispatch:      # allow manual run from Actions tab
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure jq is available
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      - name: Fetch counts from CountAPI
+        id: get
+        env:
+          NS: pbw-calculator
+        run: |
+          set -e
+          VISITS=$(curl -s "https://api.countapi.xyz/get/$NS/visits" | jq -r '.value // empty')
+          CALC=$(curl -s "https://api.countapi.xyz/get/$NS/calc" | jq -r '.value // empty')
+          echo "ts=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+          echo "visits=$VISITS" >> $GITHUB_OUTPUT
+          echo "calc=$CALC" >> $GITHUB_OUTPUT
+
+      - name: Append to analytics/countapi_log.csv
+        run: |
+          mkdir -p analytics
+          FILE=analytics/countapi_log.csv
+          if [ ! -f "$FILE" ]; then echo "timestamp,visits,calc" > "$FILE"; fi
+          echo "${{ steps.get.outputs.ts }},${{ steps.get.outputs.visits }},${{ steps.get.outputs.calc }}" >> "$FILE"
+
+      - name: Commit CSV update
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add analytics/countapi_log.csv
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update CountAPI log"
+            git push
+          fi
