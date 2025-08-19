@@ -393,56 +393,11 @@
     });
   </script>
 
-  <!-- CountAPI: pbw-calculator -->
-<!-- Counters via Cloudflare Worker proxy -->
-<script>
-(function () {
-  const NS = 'pbw-calculator';
-  const PROXY = 'https://pbw-calc.sahawatt.workers.dev/'; // <-- paste your Worker URL
-
-  // Visible counters (debug-friendly)
-  const bar = document.createElement('div');
-  bar.style.cssText = 'margin-top:12px;font-size:12px;color:#94a3b8;text-align:center';
-  bar.innerHTML = '<span id="visTxt">Visits: …</span> &nbsp; • &nbsp; <span id="calcTxt">Calculations: …</span>';
-  document.body.appendChild(bar);
-  const visEl = () => document.getElementById('visTxt');
-  const calcEl = () => document.getElementById('calcTxt');
-
-  async function getJSON(u) {
-    try { const r = await fetch(u, {cache:'no-cache'}); if (!r.ok) throw 0; return await r.json(); }
-    catch { return null; }
-  }
-
-  // Count visit every load (restore rate-limit later if you want)
-  (async () => {
-    const data = await getJSON(`${PROXY}/hit/${NS}/visits`);
-    visEl().textContent = data ? 'Visits: ' + data.value : 'Visits: unavailable';
-  })();
-
-  // Count first valid calculation per page load
-  let countedCalc = false;
-  async function bumpCalcOnce(){
-    if (countedCalc) return;
-    const data = await getJSON(`${PROXY}/hit/${NS}/calc`);
-    calcEl().textContent = data ? 'Calculations: ' + data.value : 'Calculations: unavailable';
-    countedCalc = true;
-  }
-
-  // Hook your calc() (called after user inputs)
-  const orig = window.calc;
-  window.calc = function () {
-    const res = orig.apply(this, arguments);
-    const h = document.getElementById('heightCm');
-    if (h && h.value && !isNaN(parseFloat(h.value))) bumpCalcOnce();
-    return res;
-  };
-})();
-</script>
- <!-- end CountAPI -->
 
 </body>
 
 </html>
+
 
 
 
