@@ -273,74 +273,6 @@
 </head>
 
 <body>
-<!-- CountAPI: pbw-calculator -->
-<script>
-  (function () {
-    const NS = 'pbw-calculator';
-    const VKEY = 'visits';
-    const CKEY = 'calc';
-
-    // Add visible counters
-    const bar = document.createElement('div');
-    bar.style.cssText = 'margin-top:12px;font-size:12px;color:#94a3b8;text-align:center';
-    bar.innerHTML = '<span id="visTxt">Visits: …</span> &nbsp; • &nbsp; <span id="calcTxt">Calculations: …</span>';
-    document.body.appendChild(bar);
-    const visTxt = () => document.getElementById('visTxt');
-    const calcTxt = () => document.getElementById('calcTxt');
-
-    async function getJSON(url) {
-      try {
-        const r = await fetch(url, {cache:'no-cache'});
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return await r.json();
-      } catch (e) {
-        const vt = visTxt(), ct = calcTxt();
-        if (vt) vt.textContent = 'Visits: blocked/unavailable';
-        if (ct) ct.textContent = 'Calculations: blocked/unavailable';
-        console.warn('CountAPI error', e);
-        return null;
-      }
-    }
-
-    async function bumpVisits() {
-      const data = await getJSON(`https://api.countapi.xyz/hit/${NS}/${VKEY}`);
-      if (data && visTxt()) visTxt().textContent = 'Visits: ' + data.value;
-    }
-
-    // expose a helper to bump calc count after first valid calc
-    let countedCalc = false;
-    async function bumpCalcOnce() {
-      if (countedCalc) return;
-      const data = await getJSON(`https://api.countapi.xyz/hit/${NS}/${CKEY}`);
-      if (data && calcTxt()) calcTxt().textContent = 'Calculations: ' + data.value;
-      countedCalc = true;
-    }
-
-    // Try to hook your calc() if it exists
-    const hook = () => {
-      if (typeof window.calc === 'function') {
-        const orig = window.calc;
-        window.calc = function () {
-          const res = orig.apply(this, arguments);
-          const hEl = document.getElementById('heightCm');
-          if (hEl && hEl.value && !isNaN(parseFloat(hEl.value))) bumpCalcOnce();
-          return res;
-        };
-      } else {
-        // Fallback: when height becomes a number, count once
-        const hEl = document.getElementById('heightCm');
-        if (hEl) {
-          hEl.addEventListener('input', () => {
-            if (!isNaN(parseFloat(hEl.value))) bumpCalcOnce();
-          });
-        }
-      }
-    };
-
-    bumpVisits();
-    window.addEventListener('DOMContentLoaded', hook);
-  })();
-</script> <!-- end CountAPI -->
 
   <div class="app">
     <h1>PBW & Tidal Volume Calculator</h1>
@@ -460,9 +392,58 @@
       if (e.key === 'Enter') { e.preventDefault(); calc(); }
     });
   </script>
+
+  <!-- CountAPI: pbw-calculator -->
+<!-- Counters via Cloudflare Worker proxy -->
+<script>
+(function () {
+  const NS = 'pbw-calculator';
+  const PROXY = 'https://pbw-calc.sahawatt.workers.dev/'; // <-- paste your Worker URL
+
+  // Visible counters (debug-friendly)
+  const bar = document.createElement('div');
+  bar.style.cssText = 'margin-top:12px;font-size:12px;color:#94a3b8;text-align:center';
+  bar.innerHTML = '<span id="visTxt">Visits: …</span> &nbsp; • &nbsp; <span id="calcTxt">Calculations: …</span>';
+  document.body.appendChild(bar);
+  const visEl = () => document.getElementById('visTxt');
+  const calcEl = () => document.getElementById('calcTxt');
+
+  async function getJSON(u) {
+    try { const r = await fetch(u, {cache:'no-cache'}); if (!r.ok) throw 0; return await r.json(); }
+    catch { return null; }
+  }
+
+  // Count visit every load (restore rate-limit later if you want)
+  (async () => {
+    const data = await getJSON(`${PROXY}/hit/${NS}/visits`);
+    visEl().textContent = data ? 'Visits: ' + data.value : 'Visits: unavailable';
+  })();
+
+  // Count first valid calculation per page load
+  let countedCalc = false;
+  async function bumpCalcOnce(){
+    if (countedCalc) return;
+    const data = await getJSON(`${PROXY}/hit/${NS}/calc`);
+    calcEl().textContent = data ? 'Calculations: ' + data.value : 'Calculations: unavailable';
+    countedCalc = true;
+  }
+
+  // Hook your calc() (called after user inputs)
+  const orig = window.calc;
+  window.calc = function () {
+    const res = orig.apply(this, arguments);
+    const h = document.getElementById('heightCm');
+    if (h && h.value && !isNaN(parseFloat(h.value))) bumpCalcOnce();
+    return res;
+  };
+})();
+</script>
+ <!-- end CountAPI -->
+
 </body>
 
 </html>
+
 
 
 
