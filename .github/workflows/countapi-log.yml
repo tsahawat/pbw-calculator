@@ -1,12 +1,18 @@
 name: CountAPI Daily Log
+permissions:
+  contents: write
+
 on:
   schedule:
-    - cron: "5 0 * * *"   # 00:05 UTC daily (~07:05 Bangkok, UTC+7)
-  workflow_dispatch:      # allow manual run from Actions tab
+    - cron: "5 0 * * *"   # 00:05 UTC (~07:05 Bangkok)
+  workflow_dispatch:
 
 jobs:
   log:
     runs-on: ubuntu-latest
+    env:
+      NS: pbw-calculator
+      PROXY: https://pbw-calc.sahawatt.workers.dev/   # <-- your Worker URL
     steps:
       - uses: actions/checkout@v4
 
@@ -16,14 +22,17 @@ jobs:
             sudo apt-get update && sudo apt-get install -y jq
           fi
 
-      - name: Fetch counts from CountAPI
+      - name: Initialize keys (idempotent)
+        run: |
+          curl -s "$PROXY/create/$NS/visits" || true
+          curl -s "$PROXY/create/$NS/calc"   || true
+
+      - name: Fetch counts via proxy
         id: get
-        env:
-          NS: pbw-calculator
         run: |
           set -e
-          VISITS=$(curl -s "https://api.countapi.xyz/get/$NS/visits" | jq -r '.value // empty')
-          CALC=$(curl -s "https://api.countapi.xyz/get/$NS/calc" | jq -r '.value // empty')
+          VISITS=$(curl -s "$PROXY/get/$NS/visits" | jq -r '.value // empty')
+          CALC=$(curl -s "$PROXY/get/$NS/calc"   | jq -r '.value // empty')
           echo "ts=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
           echo "visits=$VISITS" >> $GITHUB_OUTPUT
           echo "calc=$CALC" >> $GITHUB_OUTPUT
