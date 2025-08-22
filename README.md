@@ -16,7 +16,7 @@
 1. Open this <a href ="https://tsahawat.github.io/pbw-calculator/">link</a> in Chrome.
 2. Tap "**⠇menu**" (three dots) icon.
 3. Choose "**Add to Home Screen**".
-4. Tap "**Add**".
+4. Tap "**Install**".
 
 🧑‍🎨 Created by Sahawat Thertchanakun
 
